@@ -377,9 +377,36 @@ function connectionHandler(proxyConnection) {
       }
 
       function checkAuthorization(authType, shouldSendFailResp) {
+
+        const simplePass = !serviceOptions.authCredentials;
+        
+        function testCredentials(serviceOptions, credential) {
+          let username = "";
+          let password = credential;
+          const index = credential.indexOf(":");
+          if (index !== -1) {
+            username = credential.slice(0, index);
+            password = credential.slice(index + 1);
+          }
+
+          if (serviceOptions.authPassword) {
+            return serviceOptions.authPassword === password;
+          }
+          if (Array.isArray(serviceOptions.authCredentials)) {
+            return serviceOptions.authCredentials.includes(password);
+          }
+          if (typeof serviceOptions.authCredentials === 'object') {
+            return Object.hasOwn(serviceOptions.authCredentials, username) &&
+              serviceOptions.authCredentials[username] === password;
+          }
+          return false;
+        }
+        
+
         if (authType === "form" || authType === "cookies") {
           const cookies = parseCookies(getHeader(headers, "Cookie") || "");
-          if (cookies[serviceOptions.authCookie] === serviceOptions.authPassword) {
+          const authCookie = cookies[serviceOptions.authCookie];
+          if (testCredentials(serviceOptions, authCookie)) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_GRANTED_COOKIE] Authorized via cookie`);
             // Remove cookie before sending to server
             delete cookies[serviceOptions.authCookie];
@@ -395,6 +422,7 @@ function connectionHandler(proxyConnection) {
               authCookie: serviceOptions.authCookie,
               hostname,
               ip: realIp || ip,
+              simplePass: simplePass,
             };
             const authHtml = formatString(defaultAuthHtmlFile, vars);
             proxyConnection.write(
@@ -413,8 +441,11 @@ function connectionHandler(proxyConnection) {
         }
         else if (authType === "basic") {
           // Authorize using WWW-Authenticate header
-          const password = Buffer.from((getHeader(headers, "Authorization") || "").split(" ")[1] || "", "base64").toString().split(":")[1];
-          if (password === serviceOptions.authPassword) {
+          const authHeader = getHeader(headers, "Authorization") || "";
+          const token = authHeader.split(" ")[1] || "";
+          const decodedCredentials = Buffer.from(token, "base64").toString();
+
+          if (testCredentials(serviceOptions, decodedCredentials)) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_GRANTED_WWW_AUTHENTICATE] Authorized via Authorization header`);
             return true;
           }
@@ -435,7 +466,8 @@ function connectionHandler(proxyConnection) {
         }
         else if (authType === "custom-header") {
           const header = getHeader(headers, serviceOptions.customAuthHeader);
-          if (header === serviceOptions.authPassword) {
+          
+          if (testCredentials(serviceOptions, header)) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_GRANTED_HEADER] Authorized via custom header ${serviceOptions.customAuthHeader}`);
             return true;
           }
