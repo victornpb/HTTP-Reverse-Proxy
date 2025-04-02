@@ -236,7 +236,6 @@
 
         <form class="form login" action="/proxy_authentication">
             <!-- USER FIELD -->
-            <!--
             <div class="form__field">
                 <label for="proxy_login__username">
                     <svg class="icon"><use xlink:href="#icon-user"></use></svg>
@@ -244,7 +243,6 @@
                 </label>
                 <input id="proxy_login__username" name="proxy_username" autocomplete="proxy_username" type="text" class="form__input" placeholder="Username">
             </div>
-            -->
 
             <!-- PASSWORD FIELD -->
             <div class="form__field">
@@ -286,21 +284,36 @@
     </svg>
 
     <script>
-        var form, password;
+        const simplePass = %{simplePass};
+        var form, username, password;
         window.onload = function() {
             form = document.querySelector("form");
             form.onsubmit = function(e) {
                 e.preventDefault();
                 authorize();
             };
+            username = document.querySelector("#proxy_login__username");
             password = document.querySelector("#proxy_login__password");
-            password.focus();
+
+            if (simplePass) {
+                username.parentElement.remove();
+                password.focus();
+            } else {
+                username.focus();
+            }
         };
 
         function authorize() {
-            if (!password.value) return; // No input
-            document.cookie = `%{authCookie}=${password.value}; path=/${"%{cookieMaxAge}" ? `; max-age=%{cookieMaxAge}` : ""}`; // Set authorization cookie
-            location.reload(); // Reload
+            if (simplePass) {
+                if (!password.value) return; // No input
+                document.cookie = `%{authCookie}=${password.value}; path=/${"%{cookieMaxAge}" ? `; max-age=%{cookieMaxAge}` : ""}`; // Set authorization cookie
+                location.reload(true); // Reload
+            }
+            else {
+                if (!username.value || !password.value) return; // No input
+                document.cookie = `%{authCookie}=${username.value}:${password.value}; path=/${"%{cookieMaxAge}" ? `; max-age=%{cookieMaxAge}` : ""}`; // Set authorization cookie
+                location.reload(true); // Reload
+            }
         }
     </script>
 </body>
