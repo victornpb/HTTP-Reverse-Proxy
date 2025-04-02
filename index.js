@@ -381,8 +381,11 @@ function connectionHandler(proxyConnection) {
         const simplePass = !serviceOptions.authCredentials;
         
         function testCredentials(serviceOptions, credential) {
+          if (!credential) return false;
+          
           let username = "";
           let password = credential;
+
           const index = credential.indexOf(":");
           if (index !== -1) {
             username = credential.slice(0, index);
