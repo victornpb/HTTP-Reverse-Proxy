@@ -378,7 +378,7 @@ function connectionHandler(proxyConnection) {
 
       function checkAuthorization(authType, shouldSendFailResp) {
 
-        const simplePass = !serviceOptions.authCredentials;
+        const simplePass = typeof serviceOptions.authPassword !== "object";
         
         function testCredentials(serviceOptions, credential) {
           if (!credential) return false;
@@ -392,15 +392,15 @@ function connectionHandler(proxyConnection) {
             password = credential.slice(index + 1);
           }
 
-          if (serviceOptions.authPassword) {
+          if (typeof serviceOptions.authPassword === "string") {
             return serviceOptions.authPassword === password;
           }
-          if (Array.isArray(serviceOptions.authCredentials)) {
-            return serviceOptions.authCredentials.includes(password);
+          if (Array.isArray(serviceOptions.authPassword)) {
+            return serviceOptions.authPassword.includes(password);
           }
-          if (typeof serviceOptions.authCredentials === 'object') {
-            return Object.hasOwn(serviceOptions.authCredentials, username) &&
-              serviceOptions.authCredentials[username] === password;
+          if (typeof serviceOptions.authPassword === 'object') {
+            return Object.hasOwn(serviceOptions.authPassword, username) &&
+              serviceOptions.authPassword[username] === password;
           }
           return false;
         }
