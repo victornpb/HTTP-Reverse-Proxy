@@ -14,7 +14,7 @@ chat.json
     "proxyHostnames": ["chat.example.com", "chat.example.net"],
     "serverHostname": "10.0.0.11",
     "serverPort": 3000,
-    "useTls": true,
+    "useTls": false,
     "auth": true,
     "authType": "cookies",
     "authPassword": "password"
@@ -22,13 +22,13 @@ chat.json
 ```
 
 Files prefixed with `_` are ignored. (except `_defaults.json` read below).
-You can use this to draft services or to disable them.
+You can use this to disable a service or to have drafts.
 
 ## Properties
 ```jsonc
 {
-    "proxyHostnames": ["localhost", "127.0.0.1"],                      // The hostnames to look for (start/end with period to match with ends/start with instead of exact match)
-    "serverHostname": "example.com",                                   // The hostname to connect to
+    "proxyHostnames": ["chat.example.com", "chat.example.net"],        // Requests matching these hostnames will get routed to this service
+    "serverHostname": "10.0.0.11",                                     // The hostname to connect to
     "serverPort": 443,                                                 // The port to connect to
     "useTls": true,                                                    // Connect using TLS (HTTPS)
     "whitelist": "whitelist.json",                                     // Path to custom whitelist for server
@@ -36,7 +36,12 @@ You can use this to draft services or to disable them.
     "realIpHeader": "CF-Connecting-Ip",                                // Header that contains real IP if behind another proxy
     "auth": false,                                                     // If this server should require authorization before connecting
     "authType": "cookies",                                             // Type of authorization to use (cookies, www-authenticate, custom-header)
-    "authPassword": "password",                                        // The password required to connect, do not set this to null, remove to use defaults
+    "authPassword": "password",                                        // The password required to connect. This can be a string for a single password, an array of multiple passwords, or an object containing username:password pairs.
+    "authPassword": ["password1", "password2", "password3"],           // Array of valid passwords
+    "authPassword": {                                                  // Object of usernames and passwords (this will enable user/pass fields in the login form)
+        "user": "pass",
+        "guest": "1234"
+    },                                        
     "customAuthHeader": "X-HTTP-Reverse-Proxy-Authorization",          // Cookie used for custom header based authorization
     "authCookie": "HTTP-Reverse-Proxy-Authorization",                  // Cookie used for cookie based authorization
     "cookieMaxAge": 86400,                                             // How long the authorization cookie lasts
