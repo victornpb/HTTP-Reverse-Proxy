@@ -489,7 +489,7 @@ function connectionHandler(proxyConnection) {
       // Is redirect
       if (serviceOptions.redirect) {
         LOG.CONNECTION_INFO && console.log(timestamp(), ipFormatted, '→', hostname, `[REQUEST_REDIRECTED] redirected to ${serviceOptions.redirect}`);
-        return proxyConnection.end(`${version} 301 Moved Permanently\r\nLocation: ${serviceOptions.redirect}\r\n\r\n`);
+        return proxyConnection.end(`${version} 302 Found\r\nLocation: ${serviceOptions.redirect}\r\n\r\n`);
       }
 
       // Modify headers
