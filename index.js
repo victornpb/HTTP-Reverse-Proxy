@@ -378,7 +378,7 @@ function connectionHandler(proxyConnection) {
 
       function checkAuthorization(authType, shouldSendFailResp) {
 
-        const simplePass = typeof serviceOptions.authPassword === "string";
+        const simplePass = typeof serviceOptions.authPassword !== "object";
         
         function testCredentials(serviceOptions, credential) {
           if (!credential) return false;
