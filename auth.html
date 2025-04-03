@@ -295,7 +295,7 @@
     <h1>Authorization</h1>
     <h3><a id="host-name">%{hostname}</a> is password protected</h3>
 
-    <form class="form login" action="/proxy_authentication">
+    <form class="form login" action="/proxy_authentication?hostname=%{hostname}" method="POST">
       <!-- USERNAME FIELD -->
       <div class="form__field">
         <label for="proxy_login__username">
@@ -304,7 +304,7 @@
           </svg>
           <span class="hidden">Username</span>
         </label>
-        <input id="proxy_login__username" name="proxy_username" type="text" class="form__input" placeholder="Username" autocomplete="proxy_username" required autofocus>
+        <input id="proxy_login__username" name="proxy_username_%{hostname}" type="text" class="form__input" placeholder="Username" autocomplete="username_%{hostname}" required autofocus>
       </div>
 
       <!-- PASSWORD FIELD -->
@@ -315,7 +315,7 @@
           </svg>
           <span class="hidden">Password</span>
         </label>
-        <input id="proxy_login__password" name="proxy_password" type="password" class="form__input" placeholder="Password" required autofocus>
+        <input id="proxy_login__password" name="proxy_password_%{hostname}" type="password" class="form__input" placeholder="Password" autocomplete="current-password_%{hostname}" required autofocus>
       </div>
 
       <div class="form__field">
