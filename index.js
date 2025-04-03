@@ -223,7 +223,7 @@ function displaySummary() {
   `));
   services.forEach((service, key) => {
     let credentialType = "None";
-    if (service.auth ) {
+    if (service.auth) {
       if (service.authPassword && typeof service.authPassword === "string") credentialType = "Password";
       else if (Array.isArray(service.authPassword)) credentialType = "Multiple Passwords";
       else if (typeof service.authPassword === "object") credentialType = "Multiple Username:Password";
