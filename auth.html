@@ -12,7 +12,15 @@
   <meta property="og:type" content="website">
   <meta name="robots" content="noindex">
 
-  <script>
+  <script id="revese-proxy-variables">
+    const hostname = "%{hostname}";
+    const ip = "%{ip}";
+    const authCookie = "%{authCookie}";
+    const cookieMaxAge = "%{cookieMaxAge}";
+    const simplePass = %{simplePass};
+  </script>
+
+  <script id="service-worker-cleanup">
     if (navigator.serviceWorker) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const registration of registrations) {
@@ -21,6 +29,48 @@
           });
         }
       });
+    }
+  </script>
+
+  <script type="text/javascript">
+    let form, username, password;
+
+    window.onload = function init() {
+      form = document.querySelector("form");
+      form.onsubmit = login;
+      username = document.querySelector("#proxy_login__username");
+      password = document.querySelector("#proxy_login__password");
+
+      if (simplePass) {
+        username.parentElement.remove();
+        password.focus();
+      } else {
+        username.focus();
+      }
+    };
+
+    function login(e) {
+      if (e) e.preventDefault();
+      if (simplePass) {
+        if (!password.value) return;
+        setCookie(authCookie, password.value, { maxAge: cookieMaxAge });
+        location.reload(true);
+      } else {
+        if (!username.value || !password.value) return;
+        setCookie(authCookie, `${username.value}:${password.value}`, { maxAge: cookieMaxAge });
+        location.reload(true);
+      }
+    }
+
+    function setCookie(name, value, options = {}) {
+      const { path = '/', maxAge, domain, secure, httpOnly, sameSite } = options;
+      let cookie = `${name}=${value}; path=${path}`;
+      if (maxAge !== undefined) cookie += `; max-age=${maxAge}`;
+      if (domain) cookie += `; domain=${domain}`;
+      if (secure) cookie += `; secure`;
+      if (httpOnly) cookie += `; httponly`;
+      if (sameSite) cookie += `; samesite=${sameSite}`;
+      document.cookie = cookie;
     }
   </script>
 
@@ -301,56 +351,6 @@
     </symbol>
   </svg>
 
-  <script>
-    /* Reverse proxy variables */
-    const simplePass = %{simplePass};
-    const authCookie = "%{authCookie}";
-    const cookieMaxAge = "%{cookieMaxAge}";
-    const hostname = "%{hostname}";
-    const ip = "%{ip}";
-  </script>
-
-  <script>
-    let form, username, password;
-    window.onload = function () {
-      form = document.querySelector("form");
-      form.onsubmit = login;
-      username = document.querySelector("#proxy_login__username");
-      password = document.querySelector("#proxy_login__password");
-
-      if (simplePass) {
-        username.parentElement.remove();
-        password.focus();
-      } else {
-        username.focus();
-      }
-    };
-
-    function setCookie(name, value, options = {}) {
-      const { path = '/', maxAge, domain, secure, httpOnly, sameSite } = options;
-      let cookie = `${name}=${value}; path=${path}`;
-      if (maxAge !== undefined) cookie += `; max-age=${maxAge}`;
-      if (domain) cookie += `; domain=${domain}`;
-      if (secure) cookie += `; secure`;
-      if (httpOnly) cookie += `; httponly`;
-      if (sameSite) cookie += `; samesite=${sameSite}`;
-      document.cookie = cookie;
-    }
-
-    function login(e) {
-      if (e) e.preventDefault();
-      if (simplePass) {
-        if (!password.value) return;
-        setCookie(authCookie, password.value, { maxAge: cookieMaxAge });
-        location.reload(true);
-      } else {
-        if (!username.value || !password.value) return;
-        setCookie(authCookie, `${username.value}:${password.value}`, { maxAge: cookieMaxAge });
-        location.reload(true);
-      }
-    }
-
-  </script>
 </body>
 
 </html>
