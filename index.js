@@ -223,16 +223,16 @@ function displaySummary() {
   `));
   services.forEach((service, key) => {
     let credentialType = "None";
-    if (service.authPassword && typeof service.authPassword === "string") credentialType = "Single Password (string)";
-    else if (Array.isArray(service.authPassword)) credentialType = "Multiple Passwords (array)";
-    else if (typeof service.authPassword === "object") credentialType = "Multiple Username:Password (object)";
-    if (!service.auth) credentialType += " (auth disabled)";
+    if (service.authPassword && typeof service.authPassword === "string") credentialType = "Password";
+    else if (Array.isArray(service.authPassword)) credentialType = "Multiple Passwords";
+    else if (typeof service.authPassword === "object") credentialType = "Multiple Username:Password";
+    if (service.authPassword && !service.auth) credentialType += " (Auth disabled!)";
     console.log(dedent(`
       ${key}:
         Hostnames:  ${service.proxyHostnames.join(", ")}
         Target:     ${service.serverHostname}:${service.serverPort}
-        TLS:        ${service.useTls ? "Enabled" : "Not enabled"}
-        Auth:       ${service.auth ? service.authType : "PUBLIC"}}
+        TLS:        ${service.useTls ? "Enabled" : "Disabled"}
+        Auth:       ${service.auth ? service.authType : "Disabled (PUBLIC)"}
         Credential: ${credentialType}
     `));
   });
