@@ -295,7 +295,7 @@
             @click="editService(s.name)">
             <span class="dot" :style="{ background: s.name.charAt(0)==='_' ? '#666' : (s.config.enabled ? 'green' : 'red') }"></span>
             <span>{{ s.name==='_defaults' ? 'Service Defaults' : s.name }}</span>
-            <span>{{ s.hostnames?split(',')?[0] }}</span>
+            <span>{{ getHostname(s) }}</span>
           </li>
         </ul>
         <button id="new-service" @click="editService(null)">New Service</button>
@@ -530,6 +530,12 @@
             } catch { }
           } else this.serviceJson = JSON.stringify(this.currService, null, 2);
         },
+
+        getHostname(service) {
+          const hostnames = service.config.proxyHostnames;
+          if (!hostnames || hostnames.length === 0) return '--';
+          return hostnames[0];
+        }
       }
     });
   </script>
