@@ -1,14 +1,14 @@
-// admin.js
-
-// server.js
 const http = require('http');
 const fs = require('fs').promises;
 const path = require('path');
 const { URL } = require('url');
 
-const SERVICES_DIR = 'services';
-const CONFIG_FILE = 'config.json';
-const STATIC_ROOT = path.resolve(__dirname);
+const CLI_PATH = path.resolve(__dirname);
+const CURRENT_DIR = process.cwd();
+
+const ADMIN_HTML = path.join(CLI_PATH, 'admin.html');
+const SERVICES_DIR = path.join(CURRENT_DIR, '/services/');
+const CONFIG_FILE = path.join(CURRENT_DIR, 'config.json');
 
 const routes = [];
 function on(method, pattern, handler) {
@@ -45,24 +45,15 @@ function parseBody(req) {
   });
 }
 
-async function serveFile(res, filePath, contentType) {
-  const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(STATIC_ROOT + path.sep)) {
-    res.writeHead(403, { 'Content-Type': 'text/plain' });
-    return res.end('Forbidden');
-  }
+on('GET', '/', async (req, res) => {
   try {
-    const content = await fs.readFile(resolved);
-    res.writeHead(200, { 'Content-Type': contentType });
+    const content = await fs.readFile(ADMIN_HTML, 'utf8');
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(content);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('Not found');
   }
-}
-
-on('GET', '/', async (req, res) => {
-  await serveFile(res, path.join(__dirname, 'admin.html'), 'text/html');
 });
 
 on('GET', '/api/services', async (req, res) => {
@@ -103,6 +94,8 @@ on('POST', '/api/services', async (req, res) => {
 });
 
 on('GET', '/api/services/:name', async (req, res, p) => {
+  if (!validateName(p.name)) return jsonResponse(res, 403, { error: 'Invalid name' });
+
   const file = path.join(SERVICES_DIR, p.name + '.json');
   try {
     const text = await fs.readFile(file, 'utf8');
@@ -114,6 +107,8 @@ on('GET', '/api/services/:name', async (req, res, p) => {
 });
 
 on('PUT', '/api/services/:name', async (req, res, p) => {
+  if (!validateName(p.name)) return jsonResponse(res, 403, { error: 'Invalid name' });
+  
   const file = path.join(SERVICES_DIR, p.name + '.json');
   try {
     await fs.access(file);
@@ -131,6 +126,8 @@ on('PUT', '/api/services/:name', async (req, res, p) => {
 });
 
 on('DELETE', '/api/services/:name', async (req, res, p) => {
+  if (!validateName(p.name)) return jsonResponse(res, 403, { error: 'Invalid name' });
+  
   const file = path.join(SERVICES_DIR, p.name + '.json');
   try {
     await fs.unlink(file);
@@ -155,6 +152,19 @@ on('PUT', '/api/config', async (req, res) => {
   let cfg;
   try {
     cfg = await parseBody(req);
+    // validate whitelist and blacklist paths are traversable
+    if (cfg.whitelist) {
+      const resolved = path.resolve(cfg.whitelist);
+      if (!resolved.startsWith(CURRENT_DIR + path.sep)) {
+        return jsonResponse(res, 400, { error: 'Invalid whitelist path' });
+      }
+    }
+    if (cfg.blacklist) {
+      const resolved = path.resolve(cfg.blacklist);
+      if (!resolved.startsWith(CURRENT_DIR + path.sep)) {
+        return jsonResponse(res, 400, { error: 'Invalid blacklist path' });
+      }
+    }
   } catch {
     return jsonResponse(res, 400, { error: 'Invalid JSON' });
   }
@@ -255,6 +265,12 @@ async function startServer(port = 3001) {
     })();
   });
   return new Promise(resolve => server.listen(port, () => resolve(server)));
+}
+
+function validateName(name) {
+  // restrict file names to prevents directory traversal attacks using ../..\ or possibly unicode escape sequences
+  if (/^[a-zA-Z0-9_-]+$/.test(name)) return true;
+  return false;
 }
 
 module.exports = { startServer };
