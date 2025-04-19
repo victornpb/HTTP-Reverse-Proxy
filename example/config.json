@@ -7,6 +7,7 @@
     "whitelist": "ip-whitelist.conf",
     "blacklist": null,
     "additionalProxyServerOptions": {},
+    "adminPort": 3001,
     "logLevel": {
         "PROXY_DEBUG": 0,
         "PROXY_INFO": 1,

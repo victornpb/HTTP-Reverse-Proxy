@@ -3,6 +3,7 @@ const net = require("net");
 const tls = require("tls");
 const path = require('path');
 const fs = require("fs");
+const adminServer = require("./admin");
 const {
   requestLineRegex,
   hostnameRegex,
@@ -74,6 +75,11 @@ function main() {
   }
   else if (command === "start") {
     startProxy();
+    // Start admin server
+    if (proxyConfig.adminPort) {
+      LOG.PROXY_INFO && console.log(timestamp(), `[ADMIN_SERVER] Starting admin server on port ${proxyConfig.adminPort}...`);
+      adminServer.startServer(proxyConfig.adminPort);
+    }
   }
   else {
     console.error("Unknown command:", command);
