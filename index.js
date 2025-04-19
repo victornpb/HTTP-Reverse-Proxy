@@ -177,7 +177,8 @@ function startProxy() {
 
   // Dynamically load services into a map that is live reloaded
   services = createLiveFileMap('./services/*.json', (service, key, filename) => {
-    LOG.SERVICE_INFO && console.log(timestamp(), "[SERVICE_INFO] Loaded service:", key, '\n', service);
+    LOG.SERVICE_INFO && console.log(timestamp(), "[SERVICE_INFO] Loaded service:", key);
+    LOG.SERVICE_DEBUG && console.log(service);
     return service;
   });
   services.watch();
@@ -208,7 +209,7 @@ function displaySummary() {
       Hostname: ${proxyConfig.hostname || "0.0.0.0"}
       Port: ${proxyConfig.port || 80}
       
-      TLS: ${proxyConfig.tls ? "Enabled" : "Not enabled"}
+      TLS: ${proxyConfig.tls ? "Enabled (Serving HTTPS)" : "Not enabled (Serving HTTP)"}
         - Key: ${proxyConfig.key || "Not Provided"}
         - Certificate: ${proxyConfig.cert || "Not Provided"}
     
@@ -221,12 +222,19 @@ function displaySummary() {
     --------------------------------------------------------------------------------
   `));
   services.forEach((service, key) => {
+    let credentialType = "None";
+    if (service.auth) {
+      if (service.authPassword && typeof service.authPassword === "string") credentialType = "Password";
+      else if (Array.isArray(service.authPassword)) credentialType = "Multiple Passwords";
+      else if (typeof service.authPassword === "object") credentialType = "Multiple Username:Password";
+    }
     console.log(dedent(`
       ${key}:
-        Hostnames: ${service.proxyHostnames.join(", ")}
-        Target:    ${service.serverHostname}:${service.serverPort}
-        TLS:       ${service.useTls ? "Enabled" : "Not enabled"}
-        Auth:      ${service.auth ? service.authType : "None"}
+        Hostnames:  ${service.proxyHostnames.join(", ")}
+        Target:     ${service.serverHostname}:${service.serverPort}
+        TLS:        ${service.useTls ? "Enabled (https)" : "Disabled"}
+        Auth:       ${service.auth ? `Protected (${service.authType})` : "PUBLIC"}
+        Credential: ${credentialType}
     `));
   });
   console.log('='.repeat(80));
@@ -260,7 +268,7 @@ function connectionHandler(proxyConnection) {
     const rawData = splitRawData.join("\r\n\r\n");
     const splitHeaders = rawHeaders.split("\r\n");
 
-    let [requestLine, method, uri, version] = splitHeaders.splice(0, 1)[0].match(requestLineRegex) || []; // Get and remove request line from headers
+    let [requestLine, method, uri, httpVer] = splitHeaders.splice(0, 1)[0].match(requestLineRegex) || []; // Get and remove request line from headers
 
     if (requestLine) {
       // Get headers
@@ -312,8 +320,8 @@ function connectionHandler(proxyConnection) {
       ipFormatted = realIp ? `🏛️ ${ip} 🖥 ${realIp}` : `🖥 ${ip}`;
 
       // Make sure using supported version
-      if (serviceOptions.supportedVersions && !serviceOptions.supportedVersions.includes(version)) {
-        LOG.CONNECTION_REFUSED && console.log(timestamp(), ipFormatted, '→', hostname, `[CONNECTION_UNSUPPORTED_VERSION] using unsupported version ${version}`);
+      if (serviceOptions.supportedVersions && !serviceOptions.supportedVersions.includes(httpVer)) {
+        LOG.CONNECTION_REFUSED && console.log(timestamp(), ipFormatted, '→', hostname, `[CONNECTION_UNSUPPORTED_VERSION] using unsupported version ${httpVer}`);
         return proxyConnection.destroy();
       }
 
@@ -377,9 +385,39 @@ function connectionHandler(proxyConnection) {
       }
 
       function checkAuthorization(authType, shouldSendFailResp) {
+
+        const simplePass = typeof serviceOptions.authPassword !== "object";
+        
+        function testCredentials(serviceOptions, credential) {
+          if (!credential) return false;
+          
+          let username = "";
+          let password = credential;
+
+          const index = credential.indexOf(":");
+          if (index !== -1) {
+            username = credential.slice(0, index);
+            password = credential.slice(index + 1);
+          }
+
+          if (typeof serviceOptions.authPassword === "string") {
+            return serviceOptions.authPassword === password;
+          }
+          if (Array.isArray(serviceOptions.authPassword)) {
+            return serviceOptions.authPassword.includes(password);
+          }
+          if (typeof serviceOptions.authPassword === 'object') {
+            return Object.hasOwn(serviceOptions.authPassword, username) &&
+              serviceOptions.authPassword[username] === password;
+          }
+          return false;
+        }
+        
+
         if (authType === "form" || authType === "cookies") {
           const cookies = parseCookies(getHeader(headers, "Cookie") || "");
-          if (cookies[serviceOptions.authCookie] === serviceOptions.authPassword) {
+          const authCookie = cookies[serviceOptions.authCookie];
+          if (testCredentials(serviceOptions, authCookie)) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_GRANTED_COOKIE] Authorized via cookie`);
             // Remove cookie before sending to server
             delete cookies[serviceOptions.authCookie];
@@ -395,10 +433,11 @@ function connectionHandler(proxyConnection) {
               authCookie: serviceOptions.authCookie,
               hostname,
               ip: realIp || ip,
+              simplePass: simplePass,
             };
             const authHtml = formatString(defaultAuthHtmlFile, vars);
             proxyConnection.write(
-              `${version} 401 Unauthorized\r\n` +
+              `${httpVer} 401 Unauthorized\r\n` +
               `Content-Type: text/html\r\n` +
               `Content-Length: ${authHtml.length}\r\n` +
               `Cache-Control: no-cache, no-store, must-revalidate\r\n` +
@@ -413,15 +452,18 @@ function connectionHandler(proxyConnection) {
         }
         else if (authType === "basic") {
           // Authorize using WWW-Authenticate header
-          const password = Buffer.from((getHeader(headers, "Authorization") || "").split(" ")[1] || "", "base64").toString().split(":")[1];
-          if (password === serviceOptions.authPassword) {
+          const authHeader = getHeader(headers, "Authorization") || "";
+          const token = authHeader.split(" ")[1] || "";
+          const decodedCredentials = Buffer.from(token, "base64").toString();
+
+          if (testCredentials(serviceOptions, decodedCredentials)) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_GRANTED_WWW_AUTHENTICATE] Authorized via Authorization header`);
             return true;
           }
           if (shouldSendFailResp) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_DENIED_WWW_AUTHENTICATE] Unauthorized`);
             proxyConnection.write(
-              `${version} 401 Unauthorized\r\n`+
+              `${httpVer} 401 Unauthorized\r\n`+
               `WWW-Authenticate: Basic\r\n`+
               `Content-Length: 0\r\n`+
               `Cache-Control: no-cache, no-store, must-revalidate\r\n` +
@@ -435,13 +477,14 @@ function connectionHandler(proxyConnection) {
         }
         else if (authType === "custom-header") {
           const header = getHeader(headers, serviceOptions.customAuthHeader);
-          if (header === serviceOptions.authPassword) {
+          
+          if (testCredentials(serviceOptions, header)) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_GRANTED_HEADER] Authorized via custom header ${serviceOptions.customAuthHeader}`);
             return true;
           }
           if (shouldSendFailResp) {
             LOG.AUTH_DEBUG && console.log(timestamp(), ipFormatted, '→', hostname, `[AUTH_DENIED_HEADER] Unauthorized. Missing header ${serviceOptions.customAuthHeader}`);
-            proxyConnection.write(`${version} 401 Unauthorized\r\nContent-Length: 0\r\n\r\n`);
+            proxyConnection.write(`${httpVer} 401 Unauthorized\r\nContent-Length: 0\r\n\r\n`);
           }
           return false;
         }
@@ -454,7 +497,7 @@ function connectionHandler(proxyConnection) {
       // Is redirect
       if (serviceOptions.redirect) {
         LOG.CONNECTION_INFO && console.log(timestamp(), ipFormatted, '→', hostname, `[REQUEST_REDIRECTED] redirected to ${serviceOptions.redirect}`);
-        return proxyConnection.end(`${version} 301 Moved Permanently\r\nLocation: ${serviceOptions.redirect}\r\n\r\n`);
+        return proxyConnection.end(`${httpVer} 302 Found\r\nLocation: ${serviceOptions.redirect}\r\n\r\n`);
       }
 
       // Modify headers
@@ -480,12 +523,12 @@ function connectionHandler(proxyConnection) {
       const bypassOptions = serviceOptions.uriBypass?.[uri];
       if (bypassOptions) {
         const bypassHeaders = objectDefaults(bypassOptions.headers, { "Content-Length": bypassOptions.data.length || 0 });
-        return proxyConnection.write(`${version} ${bypassOptions.statusCode || 200} ${bypassOptions.statusMessage || ""}\r\n${Object.entries(bypassHeaders).map(i => `${i[0]}: ${i[1]}`).join("\r\n")}\r\n\r\n${bypassOptions.data || ""}`);
+        return proxyConnection.write(`${httpVer} ${bypassOptions.statusCode || 200} ${bypassOptions.statusMessage || ""}\r\n${Object.entries(bypassHeaders).map(i => `${i[0]}: ${i[1]}`).join("\r\n")}\r\n\r\n${bypassOptions.data || ""}`);
       }
 
       // Reconstruct data
       const reconstructedData = Buffer.concat([
-        Buffer.from(`${method} ${serviceOptions.forceUri || uri} ${version}`), // Request line
+        Buffer.from(`${method} ${serviceOptions.forceUri || uri} ${httpVer}`), // Request line
         Buffer.from("\r\n"), // New line
         Buffer.from(Object.entries(headers).map(i => `${i[0]}: ${i[1]}`).join("\r\n")), // Headers
         Buffer.from("\r\n\r\n"), // New line before data

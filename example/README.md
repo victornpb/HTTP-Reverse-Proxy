@@ -22,7 +22,7 @@ Global proxy configuration. Customize the following settings in `config.json`:
 
 - **Port**: Set the listening port for the proxy server (default: 80).
 - **Hostname**: Specify the server hostname (default: null).
-- **TLS**: Enable by providing paths to `key` and `cert` files.
+- **TLS**: Enable HTTPs by providing paths to `key` and `cert` files.
 - **Whitelist**: Set the path to `ip-whitelist.conf` for allowed IPs.
 - **Blacklist**: Optionally set the path to `ip-blacklist.conf` to block IPs.
 
