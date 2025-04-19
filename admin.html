@@ -287,8 +287,8 @@
     <div class="container">
       <aside class="sidebar" :class="{ collapsed:isSidebarCollapsed, open:isSidebarOpen }">
         <div class="sidebar-section" @click="editConfig">Global Config</div>
-        <div class="sidebar-section" @click="editList('whitelist')">Whitelist</div>
-        <div class="sidebar-section" @click="editList('blacklist')">Blacklist</div>
+        <div class="sidebar-section" @click="editWhitelist">Whitelist</div>
+        <div class="sidebar-section" @click="editBlacklist">Blacklist</div>
         <div class="sidebar-section" @click="view='services'">Services (Count: {{services.length}})</div>
         <ul class="services-list">
           <li v-for="s in services" :key="s.name" :class="{ disabled: s.name.charAt(0)==='_' }"
@@ -325,14 +325,14 @@
         <!-- Whitelist -->
         <form v-if="view==='whitelist'">
           <h2>Whitelist</h2>
-          <label>Content:<textarea rows="32" v-model="listContent"></textarea></label>
-          <div id="actions"><button type="button" @click="saveList('whitelist')">Save</button></div>
+          <label>Content:<textarea rows="32" v-model="whitelist"></textarea></label>
+          <div id="actions"><button type="button" @click="saveWhitelist()">Save</button></div>
         </form>
         <!-- Blacklist -->
         <form v-if="view==='blacklist'">
           <h2>Blacklist</h2>
-          <label>Content:<textarea rows="32" v-model="listContent"></textarea></label>
-          <div id="actions"><button type="button" @click="saveList('blacklist')">Save</button></div>
+          <label>Content:<textarea rows="32" v-model="blacklist"></textarea></label>
+          <div id="actions"><button type="button" @click="saveBlacklist()">Save</button></div>
         </form>
         <!-- Service -->
         <div v-if="view==='service'">
@@ -376,11 +376,15 @@
         isSidebarCollapsed: false,
         isSidebarOpen: false,
         view: 'services',
-        services: [],
-        currService: { name: '', config: {} },
         hostnames: '',
+        
         config: { port: null, hostname: '', key: '', cert: '', whitelist: '', blacklist: '' },
-        listContent: '',
+        services: [],
+        
+        currService: { name: '', config: {} },
+        whitelist: '',
+        blacklist: '',
+        
         advancedConfig: false,
         advancedService: false,
         configJson: '',
@@ -391,13 +395,9 @@
         toggleSidebar() {
           this.isSidebarCollapsed = !this.isSidebarCollapsed;
           if (window.innerWidth <= 768) this.isSidebarOpen = !this.isSidebarOpen;
-
         },
-        async loadServices() {
-          const res = await fetch('/api/services');
-          this.services = await res.json();
 
-        },
+        // proxy config
         async loadConfig() {
           const res = await fetch('/api/config');
           const d = await res.json();
@@ -405,31 +405,10 @@
           this.configJson = JSON.stringify(d, null, 2);
 
         },
-        async loadList(type) {
-          const res = await fetch(`/api/${type}`);
-          const d = await res.json();
-          this.listContent = d.content;
-
-        },
-        editConfig() {
+        async editConfig() {
           this.loadConfig();
           this.advancedConfig = false;
           this.view = 'config';
-
-        },
-        editList(type) {
-          this.loadList(type);
-          this.view = type;
-
-        },
-        toggleAdvancedConfig() {
-          this.advancedConfig = !this.advancedConfig;
-          if (!this.advancedConfig) {
-            try {
-              this.config = JSON.parse(this.configJson);
-
-            } catch { }
-          } else this.configJson = JSON.stringify(this.config, null, 2);
         },
         async saveConfig() {
           let body;
@@ -443,15 +422,52 @@
           this.view = 'services';
           this.loadServices();
         },
-        async saveList(type) {
-          await fetch(`/api/${type}`, {
+        toggleAdvancedConfig() {
+          this.advancedConfig = !this.advancedConfig;
+          if (!this.advancedConfig) {
+            try {
+              this.config = JSON.parse(this.configJson);
+
+            } catch { }
+          } else this.configJson = JSON.stringify(this.config, null, 2);
+        },
+        
+        // whitelist/blacklist
+        async editWhitelist() {
+          this.view = 'whitelist';
+          const res = await fetch(`/api/whitelist`);
+          const d = await res.json();
+          this.whitelist = d.content;
+        },
+        async editBlacklist() {
+          this.view = 'blacklist';
+          const res = await fetch(`/api/blacklist`);
+          const d = await res.json();
+          this.blacklist = d.content;
+        },
+        async saveWhitelist() {
+          await fetch('/api/whitelist', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: this.listContent })
+            body: JSON.stringify({ content: this.whitelist })
           });
-          this.view = 'services';
+          this.editWhitelist();
         },
-        editService(name) {
+        async saveBlacklist() {
+          await fetch('/api/blacklist', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: this.blacklist })
+          });
+          this.editBlacklist();
+        },
+
+        // services
+        async loadServices() {
+          const res = await fetch('/api/services');
+          this.services = await res.json();
+        },
+        async editService(name) {
           if (!name) {
             this.currService = {
               name: '',
@@ -470,19 +486,11 @@
             const s = this.services.find(x => x.name === name);
             this.currService = JSON.parse(JSON.stringify(s));
 
-          } this.hostnames = this.currService.config.proxyHostnames.join(',');
+          }
+          this.hostnames = this.currService.config.proxyHostnames.join(',');
           this.serviceJson = JSON.stringify(this.currService, null, 2);
           this.advancedService = false;
           this.view = 'service';
-        },
-        toggleAdvancedService() {
-          this.advancedService = !this.advancedService;
-          if (!this.advancedService) {
-            try {
-              this.currService = JSON.parse(this.serviceJson);
-
-            } catch { }
-          } else this.serviceJson = JSON.stringify(this.currService, null, 2);
         },
         async saveService() {
           if (this.advancedService) this.currService = JSON.parse(this.serviceJson);
@@ -512,7 +520,16 @@
             body: JSON.stringify(copy)
           });
           this.loadServices();
-        }
+        },
+        toggleAdvancedService() {
+          this.advancedService = !this.advancedService;
+          if (!this.advancedService) {
+            try {
+              this.currService = JSON.parse(this.serviceJson);
+
+            } catch { }
+          } else this.serviceJson = JSON.stringify(this(currService, null, 2);
+        },
       }
     });
   </script>
