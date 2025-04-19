@@ -62,7 +62,7 @@ async function serveFile(res, filePath, contentType) {
 }
 
 on('GET', '/', async (req, res) => {
-  await serveFile(res, path.join(__dirname, 'damin.html'), 'text/html');
+  await serveFile(res, path.join(__dirname, 'admin.html'), 'text/html');
 });
 
 on('GET', '/api/services', async (req, res) => {
