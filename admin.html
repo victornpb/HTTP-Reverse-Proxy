@@ -154,7 +154,7 @@
       min-height: 3.5em;
     }
     .detail {
-      font-size: 85%;
+      font-size: 9pt;
       color: var(--textMutedColor);
     }
 
@@ -194,10 +194,10 @@
       margin-bottom: .75rem;
     }
 
-    form input[type=text],
-    form input[type=number],
-    form textarea,
-    form select {
+    input[type=text],
+    input[type=number],
+    textarea,
+    select {
       width: 100%;
       padding: .5rem;
       background-color: var(--inputBgColor);
@@ -210,7 +210,7 @@
       transition: background-color 0.3s;
     }
 
-    form input[type=checkbox] {
+    input[type=checkbox] {
       margin-right: .5rem;
     }
 
@@ -390,7 +390,7 @@ input.vt-toggle:disabled:after {
       </aside>
       <main class="main">
         <!-- Config -->
-        <div v-if="view==='config'">
+        <template v-if="view==='config'">
           <div id="actions" style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:10px;">
             <button @click="toggleAdvancedConfig">{{ advancedConfig?'Form Mode':'Advanced Mode' }}</button>
             <button @click="saveConfig">Save</button>
@@ -409,7 +409,7 @@ input.vt-toggle:disabled:after {
           <div v-if="advancedConfig">
             <textarea v-model="configJson" rows="40" style="width:100%; font-family:monospace;"></textarea>
           </div>
-        </div>
+        </template>
         <!-- Whitelist -->
         <form v-if="view==='whitelist'">
           <h2>Whitelist</h2>
@@ -423,18 +423,21 @@ input.vt-toggle:disabled:after {
           <div id="actions"><button type="button" @click="saveBlacklist()">Save</button></div>
         </form>
         <!-- Service -->
-        <div v-if="view==='service'">
-          <div v-if="!advancedService">
+        <template v-if="view==='service'">
+          <template v-if="!advancedService">
             <form>
               <div>Service</div>
               <h1 class="service-title">
                 {{currService.name||'New service'}}
-                <label style="float:right;"><input type="checkbox" class="vt-toggle" v-model="currService.config.enabled"></label>
+                <label class="detail" style="float:right;">
+                  {{currService.config.enabled ? 'Enabled' : 'Disabled'}}<br>
+                  <input type="checkbox" class="vt-toggle" v-model="currService.config.enabled">
+                </label>
               </h1>
               <h4>Proxied service</h4>
               <label>
-                Name:<input type="text" v-model="currService.name">
-                <div class="detail">Services names prefixed with _ are considered drafts</div>
+                Name:<input type="text" v-model="currService.name" placeholder="Service name" pattern="^[a-zA-Z0-9-_]+$" required title="Only letters, numbers, dashes and underscores are allowed" />
+                <div class="detail">Services names prefixed with _ are considered drafts.</div>
               </label>
 
               <label>Hostnames:
@@ -487,36 +490,36 @@ input.vt-toggle:disabled:after {
                       <button type="button" @click="currService.config.authPassword.push('')">Add Password</button>
                     </template>
                   
-                    <template v-if="getPasswordType() === 'multiple_user_pw'">
-                      <div v-for="(entry, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
-                        <label>
-                          User:
-                          <input type="text" v-model="entry.user">
-                        </label>
-                        <label>
-                          Pass:
-                          <input type="text" v-model="entry.pass">
-                        </label>
-                        <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
-                      </div>
-                      <button type="button" @click="currService.config.authPassword.push({ user: '', pass: '' })">Add User</button>
-                    </template>
+                  <!-- Multiple users & passwords -->
+                  <template v-if="getPasswordType() === 'multiple_user_pw'">
+                    <div v-for="(pass, user) in currService.config.authPassword" :key="user" style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                      <label>
+                        User:
+                        <input type="text" :value="user" @input="renameUser($event.target.value, user)">
+                      </label>
+                      <label>
+                        Pass:
+                        <input type="text" v-model="currService.config.authPassword[user]">
+                      </label>
+                      <button type="button" @click="removeUser(user)">Remove</button>
+                    </div>
+                    <button type="button" @click="addUser()">Add User</button>
+                  </template>
+                    
                   </template> 
               </section>
-
-              
             </form>
-          </div>
-          <div v-if="advancedService">
-            <textarea v-model="serviceJson" rows="40" style="width:100%; font-family:monospace;"></textarea>
-          </div>
+          </template>
+          <template v-if="advancedService">
+            <textarea v-model="serviceJson" rows="40" style="width:100%; height: 100%; font-family:monospace;"></textarea>
+          </template>
           <footer>
             <button type="button" @click="toggleAdvancedService">{{ advancedService?'Form Mode':'Advanced Mode'}}</button>
             <button type="button" @click="deleteService">Delete</button>
             <button type="button" @click="duplicateService">Duplicate</button>
             <button type="button" @click="saveService">Save</button>
           </footer>
-        </div>
+        </template>
       </main>
     </div>
   </div>
@@ -697,7 +700,20 @@ input.vt-toggle:disabled:after {
           if (type === 'single_pw') this.currService.config.authPassword = 'password';
           else if (type === 'multiple_pw') this.currService.config.authPassword = ['password'];
           else if (type === 'multiple_user_pw') this.currService.config.authPassword = { 'user': 'password'};
-        }
+        },
+
+        addUser() {
+          this.$set(this.currService.config.authPassword, '', '');
+        },
+        removeUser(user) {
+          this.$delete(this.currService.config.authPassword, user);
+        },
+        renameUser(newUser, oldUser) {
+          if (!newUser || newUser === oldUser) return;
+          const pass = this.currService.config.authPassword[oldUser];
+          this.$delete(this.currService.config.authPassword, oldUser);
+          this.$set(this.currService.config.authPassword, newUser, pass);
+        },
       }
     });
   </script>
