@@ -179,7 +179,7 @@
     }
 
     form {
-      max-width: 600px;
+      max-width: 800px;
     }
 
     form h2 {
@@ -373,13 +373,59 @@
               
 
               <h4>Authentication</h4>
-              <label>Auth Type:<select v-model="currService.config.authType">
-                  <option value="none">Public (None)</option>
-                  <option value="basic">Basic Auth</option>
-                  <option value="form">Login Form</option>
-                </select></label>
-              <label>Auth User:<input type="text" v-model="currService.config.authUser"></label>
-              <label>Auth Pass:<input type="text" v-model="currService.config.authPassword"></label>
+              <label>Auth Type:
+                <select v-model="currService.config.authType">
+                  <option value="">Public (None)</option>
+                  <option value="basic">Basic Auth (WWW-Authenticate)</option>
+                  <option value="cookies">Login Form (cookies)</option>
+                </select>
+              </label>
+
+              <div>
+                Auth Password Type:
+                <label><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Single Password</label>
+                <label><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
+                <label><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> Multiple Users & Passwords</label>
+                <div class="detail warning">
+                  ⚠️ Changing password type will reset all existing credentials
+                </div>
+              </label>
+              
+              <div id="auth-password" style="margin-top:1rem;">
+                <template v-if="getPasswordType() === 'single_pw'">
+                  <label>Password:
+                    <input type="text" v-model="currService.config.authPassword">
+                  </label>
+                </template>
+              
+                <template v-if="getPasswordType() === 'multiple_pw'">
+                  <div v-for="(pass, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
+                    <label>
+                      Password {{ index + 1 }}:
+                      <input type="text" v-model="currService.config.authPassword[index]">
+                      <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
+                    </label>
+                  </div>
+                  <button type="button" @click="currService.config.authPassword.push('')">Add Password</button>
+                </template>
+              
+                <template v-if="getPasswordType() === 'multiple_user_pw'">
+                  <div v-for="(entry, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
+                    <label>
+                      User:
+                      <input type="text" v-model="entry.user">
+                    </label>
+                    <label>
+                      Pass:
+                      <input type="text" v-model="entry.pass">
+                    </label>
+                    <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
+                  </div>
+                  <button type="button" @click="currService.config.authPassword.push({ user: '', pass: '' })">Add User</button>
+                </template>
+              
+
+              
             </form>
           </div>
           <div v-if="advancedService">
@@ -555,6 +601,17 @@
           const hostnames = service.config.proxyHostnames;
           if (!hostnames || hostnames.length === 0) return '--';
           return hostnames[0];
+        },
+        getPasswordType() {
+          if (typeof this.currService.config.authPassword === 'string') return 'single_pw';
+          else if (Array.isArray(this.currService.config.authPassword)) return 'multiple_pw';
+          else if (typeof this.currService.config.authPassword === 'object') return 'multiple_user_pw';
+          return 'INVALID';
+        },
+        setPasswordType(type) {
+          if (type === 'single_pw') this.currService.config.authPassword = 'password';
+          else if (type === 'multiple_pw') this.currService.config.authPassword = ['password'];
+          else if (type === 'multiple_user_pw') this.currService.config.authPassword = { 'user': 'password'};
         }
       }
     });
