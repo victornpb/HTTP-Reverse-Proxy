@@ -372,58 +372,61 @@
               <label><input type="checkbox" v-model="currService.config.useTls"> Use TLS</label>
               
 
-              <h4>Authentication</h4>
-              <label>Auth Type:
-                <select v-model="currService.config.authType">
-                  <option value="">Public (None)</option>
-                  <option value="basic">Basic Auth (WWW-Authenticate)</option>
-                  <option value="cookies">Login Form (cookies)</option>
-                </select>
-              </label>
-
-              <div>
-                Auth Password Type:
-                <label><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Single Password</label>
-                <label><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
-                <label><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> Multiple Users & Passwords</label>
-                <div class="detail warning">
-                  ⚠️ Changing password type will reset all existing credentials
-                </div>
-              </label>
-              
-              <div id="auth-password" style="margin-top:1rem;">
-                <template v-if="getPasswordType() === 'single_pw'">
-                  <label>Password:
-                    <input type="text" v-model="currService.config.authPassword">
-                  </label>
-                </template>
-              
-                <template v-if="getPasswordType() === 'multiple_pw'">
-                  <div v-for="(pass, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
-                    <label>
-                      Password {{ index + 1 }}:
-                      <input type="text" v-model="currService.config.authPassword[index]">
-                      <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
-                    </label>
+              <section>
+                <h4>Authentication</h4>
+                <label>Auth Type:
+                  <select v-model="currService.config.authType">
+                    <option value="">Public (None)</option>
+                    <option value="basic">Basic Auth (WWW-Authenticate)</option>
+                    <option value="cookies">Login Form (cookies)</option>
+                  </select>
+                </label>
+                
+                <template  v-if="currService.config.authType">
+                  <div>
+                    Auth Password Type:
+                    <label><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Single Password</label>
+                    <label><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
+                    <label><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> Multiple Users & Passwords</label>
+                    <div class="detail warning">
+                      ⚠️ Changing password type will reset all existing credentials
+                    </div>
                   </div>
-                  <button type="button" @click="currService.config.authPassword.push('')">Add Password</button>
-                </template>
-              
-                <template v-if="getPasswordType() === 'multiple_user_pw'">
-                  <div v-for="(entry, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
-                    <label>
-                      User:
-                      <input type="text" v-model="entry.user">
-                    </label>
-                    <label>
-                      Pass:
-                      <input type="text" v-model="entry.pass">
-                    </label>
-                    <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
-                  </div>
-                  <button type="button" @click="currService.config.authPassword.push({ user: '', pass: '' })">Add User</button>
-                </template>
-              
+                  
+                  <div id="auth-password" style="margin-top:1rem;">
+                    <template v-if="getPasswordType() === 'single_pw'">
+                      <label>Password:
+                        <input type="text" v-model="currService.config.authPassword">
+                      </label>
+                    </template>
+                  
+                    <template v-if="getPasswordType() === 'multiple_pw'">
+                      <div v-for="(pass, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
+                        <label>
+                          Password {{ index + 1 }}:
+                          <input type="text" v-model="currService.config.authPassword[index]">
+                          <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
+                        </label>
+                      </div>
+                      <button type="button" @click="currService.config.authPassword.push('')">Add Password</button>
+                    </template>
+                  
+                    <template v-if="getPasswordType() === 'multiple_user_pw'">
+                      <div v-for="(entry, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
+                        <label>
+                          User:
+                          <input type="text" v-model="entry.user">
+                        </label>
+                        <label>
+                          Pass:
+                          <input type="text" v-model="entry.pass">
+                        </label>
+                        <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
+                      </div>
+                      <button type="button" @click="currService.config.authPassword.push({ user: '', pass: '' })">Add User</button>
+                    </template>
+                  </template> 
+              </section>
 
               
             </form>
