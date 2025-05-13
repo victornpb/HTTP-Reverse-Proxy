@@ -84,6 +84,31 @@ function getHeaders(splitHeaders) {
   return headers;
 }
 
+function testCredentials(serviceOptions, credential) {
+  if (!credential) return false;
+  
+  let username = "";
+  let password = credential;
+
+  const index = credential.indexOf(":");
+  if (index !== -1) {
+    username = credential.slice(0, index);
+    password = credential.slice(index + 1);
+  }
+
+  if (typeof serviceOptions.authPassword === "string") {
+    return serviceOptions.authPassword === password;
+  }
+  if (Array.isArray(serviceOptions.authPassword)) {
+    return serviceOptions.authPassword.includes(password);
+  }
+  if (typeof serviceOptions.authPassword === 'object') {
+    return Object.hasOwn(serviceOptions.authPassword, username) &&
+      serviceOptions.authPassword[username] === password;
+  }
+  return false;
+}
+
 /**
  * Find server object using hostname and optional URI for IP mapping and wildcard support.
  * Supports proxyHostnames with wildcards:
@@ -542,6 +567,7 @@ module.exports = {
   parseCookies,
   stringifyCookies,
   objectDefaults,
+  testCredentials,
   FileWatcher,
   createLiveFileMap,
   getHeader,
