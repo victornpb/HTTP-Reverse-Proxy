@@ -7,6 +7,16 @@ const headersRegex = /^(.*?): ?(.*)$/m; // Host: localhost
 const requestLineRegex = /^(.*) (.*) (HTTP\/\d*\.\d*)$/im; // GET /hello/world HTTP/1.1
 const hostnameRegex = /[^:]*/; // localhost (excludes port)
 
+function splitOnce(input, delimiter) {
+  const idx = input.indexOf(delimiter);
+  if (idx !== -1) {
+    const before = input.slice(0, idx);
+    const after = input.slice(idx + delimiter.length);
+    return [before, after];
+  }
+  return [input, ''];
+}
+
 /**
  * Get JSON from file path
  * @param {string} filePath File path
@@ -65,11 +75,13 @@ function ipMatch(ip, matches) {
  * @returns {object} Parsed headers
  */
 function getHeaders(splitHeaders) {
-  return Object.fromEntries(splitHeaders.map(i => {
-    const match = i.match(headersRegex);
-    if (!match) return null;
-    return [match[1], match[2]];
-  }).filter(i => i));
+  const headers = {};
+  for (let i = 0; i < splitHeaders.length; i++) {
+    const header = splitHeaders[i];
+    const m = header.match(headersRegex);
+    if (m) headers[m[1]] = m[2];
+  }
+  return headers;
 }
 
 /**
@@ -171,12 +183,16 @@ function formatString(string, options, undef = "") {
  * @returns {object} Parsed cookies
  */
 function parseCookies(cookiesString) {
-  return Object.fromEntries(cookiesString.split(/; /).map(i => {
-    const [name, value] = i.split("=");
-    if (!name) return null;
-    return [name, value];
-  }).filter(i => i));
+  const cookies = {};
+  const parts = cookiesString.split(/; /);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const [name, value] = splitOnce(part, "=");
+    if (name) cookies[name] = value;
+  }
+  return cookies;
 }
+
 
 /**
  * Stringifies object of cookies
@@ -184,7 +200,7 @@ function parseCookies(cookiesString) {
  * @returns {string} Stringified cookies
  */
 function stringifyCookies(cookies) {
-  return Object.entries(cookies).map(i => `${i[0]}=${i[1]}`).join("; ");
+  return Object.entries(cookies).map(([k,v]) => `${k}=${v}`).join("; ");
 }
 
 /**
@@ -195,7 +211,6 @@ function stringifyCookies(cookies) {
  */
 function objectDefaults(obj, def) {
   if (typeof obj !== "object" || obj === null) return def;
-
   return (function checkEntries(object = obj, defaultObj = def) {
     Object.entries(defaultObj).forEach(([key, value]) => {
       if (object[key] === undefined) object[key] = value;
@@ -345,8 +360,13 @@ function createLiveFileMap(globPattern, onRead) {
  * @returns {string} Header value
  */
 function getHeader(headers, name) {
-  const key = Object.keys(headers).find(i => i.toLowerCase() === name.toLowerCase());
-  return headers[key];
+  const lowerName = name.toLowerCase();
+  for (const key in headers) {
+    if (Object.hasOwn(headers, key) && key.toLowerCase() === lowerName) {
+      return headers[key];
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -530,4 +550,5 @@ module.exports = {
   defaults,
   copyRecursiveSync,
   dedent,
+  splitOnce,
 };
