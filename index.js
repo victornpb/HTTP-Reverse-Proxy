@@ -270,11 +270,18 @@ function connectionHandler(proxyConnection) {
   let connectionToService;
 
   proxyConnection.on("data", data => {
-    // Proxy server on data
-    const [rawHeaders, ...splitRawData] = data.toString().split("\r\n\r\n");
-    const rawData = splitRawData.join("\r\n\r\n");
-    const splitHeaders = rawHeaders.split("\r\n");
+    const dataStr = data.toString();
+    let rawHeaders = dataStr;
+    let rawData = '';
+    
+    const sep = '\r\n\r\n';
+    const idx = dataStr.indexOf(sep);
+    if (idx !== -1) {
+      rawHeaders = dataStr.slice(0, idx);
+      rawData = dataStr.slice(idx + sep.length);
+    }
 
+    const splitHeaders = rawHeaders.split('\r\n');
     let [requestLine, method, uri, httpVer] = splitHeaders.splice(0, 1)[0].match(requestLineRegex) || []; // Get and remove request line from headers
 
     if (requestLine) {
