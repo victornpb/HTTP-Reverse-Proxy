@@ -59,7 +59,7 @@ let services = new Map();   // used to watch services/*.json, but they are dynam
 let globalWhitelist;
 let globalBlacklist;
 let rememberedIps = new Map(); // In-memory IP storage for "rememberIp" authentication
-
+let defaultAuthHtmlFile = ""; // Initialize defaultAuthHtmlFile
 
 function main() {
   const args = process.argv.slice(2);
@@ -100,6 +100,7 @@ function displayHelp() {
 }
 
 function scaffoldServer() {
+  const os = require("os");
   console.log("Scaffolding new server...");
 
   if (!fs.existsSync(EXAMPLE_DIR)) {
