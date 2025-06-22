@@ -326,6 +326,11 @@ function connectionHandler(proxyConnection) {
         }
       }
 
+      if (serviceResult?.enabled === false) {
+        LOG.CONNECTION_REFUSED && console.log(timestamp(), ipFormatted, '→', hostname, `[PROXY_SERVICE_DSIABLED tried to reach a disabled service at ${hostname}`);
+        return proxyConnection.destroy();
+      }
+
       // Make service options inherit default options
       const serviceOptions = objectDefaults(service, serviceDefaults || {});
 
