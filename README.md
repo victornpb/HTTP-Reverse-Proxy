@@ -47,8 +47,9 @@ For example: `plex.yourdomain.com` → `localhost:32400`
 4. Customize you proxy editing files  
   *(for instructions check [readme](./example/) inside your folder)*
 
-5. Start the proxy
+5. Start the proxy  
     ```sh
+    # Just run this commmand inside your proxy folder
     reverseproxy start
     ```
 
