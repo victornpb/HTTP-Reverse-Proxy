@@ -178,6 +178,14 @@
       margin-right: 0.5rem;
     }
 
+    small {
+      color: var(--textMutedColor);
+    }
+
+    fieldset{
+      border-color: rgba(0, 0, 0, 0.5);
+    }
+
     form {
       max-width: 800px;
     }
@@ -381,6 +389,28 @@
       content: '•';
       color: rgba(0, 0, 0, 0.2);
     }
+
+
+    label.row:has(input.vt-toggle) {
+      display: inline-flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      font-weight: bold;
+      margin-bottom: 0;
+    }
+    label.row:has(input.vt-toggle):hover,
+    label.row:has(:focus) {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--textColor);
+    }
+
   </style>
 </head>
 
@@ -410,37 +440,100 @@
       <main class="main">
         <!-- Config -->
         <template v-if="view==='config'">
-          <div id="actions" style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:10px;">
-            <button @click="toggleAdvancedConfig">{{ advancedConfig?'Form Mode':'Advanced Mode' }}</button>
-            <button class="btn-primary" @click="saveConfig">Save</button>
-          </div>
+
           <div v-if="!advancedConfig">
             <form>
               <h2>Global Config</h2>
-              <label>Port:<input type="number" v-model.number="config.port"></label>
-              <label>Hostname:<input type="text" v-model="config.hostname"></label>
-              <label>TLS Key Path:<input type="text" v-model="config.key"></label>
-              <label>TLS Cert Path:<input type="text" v-model="config.cert"></label>
-              <label>Whitelist Path:<input type="text" v-model="config.whitelist"></label>
-              <label>Blacklist Path:<input type="text" v-model="config.blacklist"></label>
+
+              <fieldset>
+                <legend>
+                  Admin UI
+                </legend>
+                <label class="row">Enabled <input type="checkbox" class="vt-toggle" v-model="config.adminPort" @change="config.adminPort = config.adminPort ? '3001' : null"></label>
+                <label>Admin Port: <input type="number" v-model.number="config.adminPort"></label>
+                <small>
+                  The port on which this admin interface will be available. Leaving this empty will disable this admin interface.<br>
+                  If you turn this off, you can still manage the reverse proxy editing the config files.<br>
+                  (Requires restart)
+                </small>
+              </fieldset>
+
+              <br>
+
+              <fieldset>
+                <legend>Reverse Proxy</legend>
+                <label>
+                  Port: <input type="number" v-model.number="config.port"> 
+                  <small>
+                    The port on which the reverse proxy will listen for incoming requests.<br>
+                    Any port can be used, but 80 and 443 are the most common.<br>
+                    (Requires restart)
+                  </small>
+                </label>
+              </fieldset>
+
+              <fieldset>
+                <legend>TLS (HTTPS)</legend>
+                <label class="row">Enable TLS <input type="checkbox" class="vt-toggle" v-model="config.tls"></label>
+                <label>TLS Key Path: <input type="text" v-model="config.key" :disabled="!config.tls"></label>
+                <label>TLS Cert Path: <input type="text" v-model="config.cert" :disabled="!config.tls"></label>
+                <small>
+                  If you enable TLS (HTTPS), you need to provide the path to your TLS key and certificate files.<br>
+                  You might also want to use port to 443.<br>
+                  (Requires restart)
+                </small>
+              </fieldset>
+
+              <fieldset>
+                <legend>IP Lists</legend>
+                <label class="row">Enable Whitelist <input type="checkbox" class="vt-toggle" v-model="config.whitelist" @change="config.whitelist = config.whitelist ? 'ip-whitelist.conf' : null"></label>
+                <label>Whitelist Path: <input type="text" v-model="config.whitelist"></label>
+
+                <label class="row">Enable Blacklist <input type="checkbox" class="vt-toggle" v-model="config.blacklist" @change="config.blacklist = config.blacklist ? 'ip-blacklist.conf' : null"></label>
+                <label>Blacklist Path: <input type="text" v-model="config.blacklist"></label>
+              </fieldset>
+              
+              <h4>Additional Proxy Server Options</h4>
+              <textarea rows="5" :value="JSON.stringify(config.additionalProxyServerOptions, null, 2)" @input="config.additionalProxyServerOptions = JSON.parse($event.target.value)" style="width:100%; font-family:monospace;"></textarea>
+
+              <details>
+                <summary>Log Level</summary>
+                <div v-for="(level, key) in config.logLevel" :key="key" style="border-bottom: 1px solid var(--borderColor);">
+                  <label class="row">
+                    {{ key }}
+                    <input type="checkbox" class="vt-toggle" v-model.number="config.logLevel[key]" :true-value="1" :false-value="0">
+                  </label>
+                </div>
+              </details>
+
+              <br>
             </form>
           </div>
+
           <div v-if="advancedConfig">
             <textarea v-model="configJson" rows="40" style="width:100%; font-family:monospace;"></textarea>
           </div>
+
+          <footer id="actions">
+            <button @click="toggleAdvancedConfig">{{ advancedConfig ? 'Form Mode' : 'Advanced Mode' }}</button>
+            <button class="btn-primary" @click="saveConfig">Save</button>
+          </footer>
         </template>
+
         <!-- Whitelist -->
         <form v-if="view==='whitelist'">
           <h2>Whitelist</h2>
           <label>Content:<textarea rows="32" v-model="whitelist"></textarea></label>
           <div id="actions"><button class="btn-primary" @click="saveWhitelist()">Save</button></div>
         </form>
+
         <!-- Blacklist -->
         <form v-if="view==='blacklist'">
           <h2>Blacklist</h2>
           <label>Content:<textarea rows="32" v-model="blacklist"></textarea></label>
           <div id="actions"><button class="btn-primary" @click="saveBlacklist()">Save</button></div>
         </form>
+
         <!-- Service -->
         <template v-if="view==='service'">
           <template v-if="!advancedService">
@@ -453,77 +546,104 @@
                   <input type="checkbox" class="vt-toggle" v-model="currService.config.enabled">
                 </label>
               </h1>
-              <h4>Proxied service</h4>
-              <label>
-                Name:<input type="text" v-model="currService.name" placeholder="Service name" pattern="^[a-zA-Z0-9-_]+$" required title="Only letters, numbers, dashes and underscores are allowed" />
-                <div class="detail">Services names prefixed with _ are considered drafts.</div>
-              </label>
 
-              <label>Hostnames:
-                <textarea v-model="hostnames" rows="3" style="width:100%; font-family:monospace;"></textarea>
-                <div class="detail">Incomming traffic matching these hostnames will be routed to this service</div>
-              </label>
-              
-              <h4>Target Server</h4>
-              <div class="detail">This is were your service is running at</div>
-              <label>Service Host:<input type="text" v-model="currService.config.serverHostname"></label>
-              <label>Service Port:<input type="number" v-model.number="currService.config.serverPort"></label>
-              <label><input type="checkbox" v-model="currService.config.useTls"> Use TLS</label>
-              
-              <section>
-                <h4>Authentication</h4>
-                <label>Auth Type:
-                  <select v-model="currService.config.authType">
-                    <option value="">Public (None)</option>
-                    <option value="basic">Basic Auth (WWW-Authenticate)</option>
-                    <option value="cookies">Login Form (cookies)</option>
-                  </select>
+              <fieldset>
+                <legend>
+                  <h3>Proxied service</h3>
+                </legend>
+                <label>
+                  Name:<input type="text" v-model="currService.name" placeholder="Service name" pattern="^[a-zA-Z0-9-_]+$" required title="Only letters, numbers, dashes and underscores are allowed" />
+                  <div class="detail">Services names prefixed with _ are considered drafts.</div>
                 </label>
+  
+                <label>Hostnames:
+                  <textarea v-model="hostnames" rows="3" style="width:100%; font-family:monospace;"></textarea>
+                  <div class="detail">Incomming traffic matching these hostnames will be routed to this service</div>
+                </label>
+              </fieldset>
+
+              <fieldset>
+                <legend>
+                  <h3>Target Server</h3>
+                </legend>
+                <label>Service Host:
+                  <small class="detail">This is were your service is running at</small>
+                  <input type="text" v-model="currService.config.serverHostname">
+                </label>
+                <label>Service Port:<input type="number" v-model.number="currService.config.serverPort"></label>
+                <label>
+                  <input type="checkbox" v-model="currService.config.useTls"> Use TLS
+                  <small>(Enable TLS if this service is running on HTTPS)</small>
+                </label>
+              </fieldset>
+
+              <fieldset>
+                <legend>
+                  <h3>Authentication</h3>
+                </legend>
+                <label class="row">Enable<input type="checkbox" class="vt-toggle" v-model="currService.config.auth"></label>
+                <small>
+                  Authentication is used to protect your service from unauthorized access.<br>
+                  If you enable it, users will need to provide credentials to access the service.
+                </small>
                 
-                <template  v-if="currService.config.authType">
-                  <div>
-                    Auth Password Type:
-                    <label><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Single Password</label>
-                    <label><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
-                    <label><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> Multiple Users & Passwords</label>
-                    <div class="detail warning">
-                      ⚠️ Changing password type will reset all existing credentials
-                    </div>
-                  </div>
+                <br>
+                
+                <div v-if="currService.config.auth">
+                  <label>Auth Type:
+                    <select v-model="currService.config.authType">
+                      <option value="">Public (None)</option>
+                      <option value="basic">Basic Auth (WWW-Authenticate)</option>
+                      <option value="cookies">Login Form (cookies)</option>
+                    </select>
+                  </label>
                   
-                  <div id="auth-password" style="margin-top:1rem;">
-                    <template v-if="getPasswordType() === 'single_pw'">
-                      <label>Password:
-                        <input type="text" v-model="currService.config.authPassword">
-                      </label>
-                    </template>
-                  
-                    <template v-if="getPasswordType() === 'multiple_pw'">
-                      <div v-for="(pass, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem;">
-                        <label>
-                          Password {{ index + 1 }}:
-                          <input type="text" v-model="currService.config.authPassword[index]">
-                          <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
-                        </label>
+                  <template  v-if="currService.config.authType">
+                    <div>
+                      Auth Password Type:
+                      <label><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Single Password</label>
+                      <label><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
+                      <label><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> Multiple Users & Passwords</label>
+                      <div class="detail warning">
+                        ⚠️ Changing password type will reset all existing credentials
                       </div>
-                      <button type="button" @click="currService.config.authPassword.push('')">Add Password</button>
-                    </template>
-                  
-                  <!-- Multiple users & passwords -->
-                  <template v-if="getPasswordType() === 'multiple_user_pw'">
-                    <div v-for="(pass, user) in currService.config.authPassword" :key="user" style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
-                      <label>
-                        User:
-                        <input type="text" :value="user" @input="renameUser($event.target.value, user)">
-                      </label>
-                      <label>
-                        Pass:
-                        <input type="text" v-model="currService.config.authPassword[user]">
-                      </label>
-                      <button type="button" @click="removeUser(user)">Remove</button>
                     </div>
-                    <button type="button" @click="addUser()">Add User</button>
-                  </template>
+                    
+                    <div id="auth-password" style="margin-top:1rem;">
+                      <template v-if="getPasswordType() === 'single_pw'">
+                        <label>Password:
+                          <input type="text" v-model="currService.config.authPassword">
+                        </label>
+                      </template>
+                    
+                      <template v-if="getPasswordType() === 'multiple_pw'">
+                        <div v-for="(pass, index) in currService.config.authPassword" :key="index" style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                          <label>
+                            Password {{ index + 1 }}:
+                            <input type="text" v-model="currService.config.authPassword[index]">
+                          </label>
+                          <button type="button" @click="currService.config.authPassword.splice(index, 1)">Remove</button>
+                        </div>
+                        <button type="button" @click="currService.config.authPassword.push('')">Add Password</button>
+                      </template>
+                    
+                    <!-- Multiple users & passwords -->
+                    <template v-if="getPasswordType() === 'multiple_user_pw'">
+                      <div v-for="(pass, user) in currService.config.authPassword" :key="user" style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                        <label>
+                          User:
+                          <input type="text" :value="user" @input="renameUser($event.target.value, user)">
+                        </label>
+                        <label>
+                          Pass:
+                          <input type="text" v-model="currService.config.authPassword[user]">
+                        </label>
+                        <button type="button" @click="removeUser(user)">Remove</button>
+                      </div>
+                      <button type="button" @click="addUser()">Add User</button>
+                    </template>
+                </div>
+                </fieldset>
                     
                   </template> 
                 </section>
@@ -534,7 +654,6 @@
           </template>
           <footer>
             <button class="btn-danger" @click="deleteService">Delete</button>
-
             <button @click="toggleAdvancedService">{{ advancedService?'Form Mode':'Advanced Mode' }}</button>
             <button type="button" @click="duplicateService">Duplicate</button>
             <button class="btn-primary" @click="saveService">Save</button>
