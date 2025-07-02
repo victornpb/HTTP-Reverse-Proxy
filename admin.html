@@ -147,8 +147,9 @@
       align-items: center;
       padding: 0.25rem 0;
       cursor: pointer;
-      color: var(--textMutedColor);
-      min-height: 3.5em;
+      color: var(--textColor);
+      min-height: 4em;
+      border-bottom: 1px solid var(--borderColor);
     }
     .detail {
       font-size: 9pt;
@@ -157,6 +158,7 @@
 
     .services-list li:hover {
       color: var(--textColor);
+      background: var(--inputHoverBgColor);
     }
 
     .services-list li.disabled {
@@ -430,8 +432,13 @@
           <li v-for="s in services" :key="s.name" @click="editService(s.name)">
             <span class="dot" :style="{ background: s.name.charAt(0)==='_' ? '#666' : (s.config.enabled === true ? 'lightGreen' : 'red') }"></span>
             <div>
-              <div>{{ s.name==='_defaults' ? 'Service Defaults' : s.name }}</div>
-              <div class="detail">{{ getHostname(s) }}</div>
+              <div>
+                {{ s.name==='_defaults' ? 'Service Defaults' : s.name }}
+              </div>
+              <div class="detail">
+                {{s.config.auth ? '🔐' : ''}}
+                {{ getHostname(s) }}
+              </div>
             </div>
           </li>
         </ul>
