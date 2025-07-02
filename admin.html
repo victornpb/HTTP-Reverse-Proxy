@@ -592,10 +592,10 @@
                 <legend>
                   <h3>Authentication</h3>
                 </legend>
-                <label class="row">Enable<input type="checkbox" class="vt-toggle" v-model="currService.config.auth"></label>
+                <label class="row">Enable Authentication<input type="checkbox" class="vt-toggle" v-model="currService.config.auth"></label>
                 <small>
-                  Authentication is used to protect your service from unauthorized access.<br>
-                  If you enable it, users will need to provide credentials to access the service.
+                  Protect this service from unauthorized access.<br>
+                  If enabled, users will be prompted for credentials to access this service.
                 </small>
                 
                 <br>
@@ -603,22 +603,27 @@
                 <div v-if="currService.config.auth">
                   <label>Auth Type:
                     <select v-model="currService.config.authType">
-                      <option value="">Public (None)</option>
+                      <option value="form">Login Page (Cookies)</option>
                       <option value="basic">Basic Auth (WWW-Authenticate)</option>
-                      <option value="cookies">Login Form (cookies)</option>
+                      <option value="custom-header">Custom Header</option>
                     </select>
                   </label>
                   
+                  <div v-if="currService.config.authType">
+                    Type of Credentials:
+                    <!-- <label style="display: inline-block;"><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Password</label>
+                    <label style="display: inline-block;"><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
+                    <label style="display: inline-block;"><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> User & Password</label> -->
+                    
+                    <select :value="getPasswordType()" @change="setPasswordType($event.target.value)">
+                      <option value="single_pw">Single password</option>
+                      <option value="multiple_pw">Multiple password</option>
+                      <option value="multiple_user_pw">User & Password</option>
+                    </select>
+                    <small class="detail warning">⚠️ Changing Type will clear existing passwords</small>
+                  </div>
+
                   <template  v-if="currService.config.authType">
-                    <div>
-                      Auth Password Type:
-                      <label><input type="radio" name="authPasswordType" value="single_pw" :checked="getPasswordType() === 'single_pw'" @change="setPasswordType('single_pw')"> Single Password</label>
-                      <label><input type="radio" name="authPasswordType" value="multiple_pw" :checked="getPasswordType() === 'multiple_pw'" @change="setPasswordType('multiple_pw')"> Multiple Passwords</label>
-                      <label><input type="radio" name="authPasswordType" value="multiple_user_pw" :checked="getPasswordType() === 'multiple_user_pw'" @change="setPasswordType('multiple_user_pw')"> Multiple Users & Passwords</label>
-                      <div class="detail warning">
-                        ⚠️ Changing password type will reset all existing credentials
-                      </div>
-                    </div>
                     
                     <div id="auth-password" style="margin-top:1rem;">
                       <template v-if="getPasswordType() === 'single_pw'">
@@ -664,8 +669,8 @@
             <textarea v-model="serviceJson" rows="40" style="width:100%; height: 100%; font-family:monospace;"></textarea>
           </template>
           <footer>
+            <button @click="toggleAdvancedService">{{ advancedService?'Form Mode':'JSON Mode' }}</button>
             <button class="btn-danger" @click="deleteService">Delete</button>
-            <button @click="toggleAdvancedService">{{ advancedService?'Form Mode':'Advanced Mode' }}</button>
             <button type="button" @click="duplicateService">Duplicate</button>
             <button class="btn-primary" @click="saveService">Save</button>
           </footer>
@@ -782,7 +787,7 @@
                 serverHostname: '',
                 serverPort: null,
                 useTls: false,
-                authType: 'none',
+                authType: '',
                 authUser: '',
                 authPassword: ''
               }
