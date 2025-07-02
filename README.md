@@ -28,7 +28,7 @@ For example: `plex.yourdomain.com` → `localhost:32400`
 
 # 🛠️ How to Get Started
 
-1. Install the Proxy Make sure [Node.js](https://nodejs.org/) is installed, then run:
+1. Install the Proxy (Make sure [Node.js](https://nodejs.org/) is installed), then run:
     ```sh
     npm install -g https://github.com/victornpb/HTTP-Reverse-Proxy.git
     ```
@@ -45,7 +45,7 @@ For example: `plex.yourdomain.com` → `localhost:32400`
     ```
 
 4. Customize you proxy editing files  
-  *(for instructions check [readme](./example/) inside your folder)*
+  *(for instructions check the [readme](./example/) inside your folder)*
 
 5. Start the proxy  
     ```sh
