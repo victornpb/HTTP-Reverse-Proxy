@@ -5,7 +5,7 @@
     "key": null,
     "cert": null,
     "whitelist": "ip-whitelist.conf",
-    "blacklist": null,
+    "blacklist": "ip-blacklist.conf",
     "additionalProxyServerOptions": {},
     "adminPort": 3001,
     "logLevel": {
