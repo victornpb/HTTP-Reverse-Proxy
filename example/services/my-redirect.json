@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "proxyHostnames": [
+    "media.mydomain.com"",
+    "jelly.mydomain.com"",
+    "jellyfin.mydomain.com"",
+    "netflix.mydomain.com"",
+    "tv.mydomain.com"
+  ],
+  "redirect": "https://flix.mydomain.com"
+}
