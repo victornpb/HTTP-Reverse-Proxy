@@ -252,7 +252,7 @@ function connectionHandler(proxyConnection) {
   const ip = proxyConnection.remoteAddress?.split("::ffff:")[1] || proxyConnection.remoteAddress;
 
   if (!ip) {
-    LOG.CONNECTION_ERROR && console.error(timestamp(), `[CONNECTION_ERROR] No IP?!`, proxyConnection);
+    LOG.CONNECTION_ERROR && console.error(timestamp(), `[CONNECTION_ERROR] No IP?!`, proxyConnection.remoteAddress);
     return proxyConnection.destroy(); // Why does this happen sometimes?
   }
 
@@ -556,6 +556,12 @@ function connectionHandler(proxyConnection) {
 
       // console.log(timestamp(), ipFormatted, '→', hostname, reconstructedData.toString());
 
+      if (connectionToService && connectionToService.hostname!==hostname) {
+        LOG.CONNECTION_ERROR && console.warn(timestamp(), "[SERVICE_CONNECTION_ERROR] Switching hosts mid connection",connectionToService.hostname, hostname);
+        closeServerConnection();
+        connectionToService = undefined;
+      }
+
       if (!connectionToService) {
         // Connect to server
         LOG.CONNECTION_ACCEPTED && console.log(timestamp(), ipFormatted, '→', hostname, `[SERVICE_CONNECTION_STARTED] connecting to service...`);
@@ -577,11 +583,13 @@ function connectionHandler(proxyConnection) {
         });
 
         connectionToService.on("drain", () => proxyConnection.resume());
+        connectionToService.hostname = hostname;
       }
 
       writeServerConnection(reconstructedData); // Write changed data if this buffer contains headers
-    } else
+    } else {
       writeServerConnection(data); // Write unchanged data if this buffer does not contain headers
+    }
   });
 
   // Proxy events
